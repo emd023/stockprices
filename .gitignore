@@ -1,0 +1,32 @@
+# Secrets
+.env
+.env.*
+!/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+.venv/
+venv/
+ENV/
+pip-wheel-metadata/
+
+# Data & logs (keep folders but ignore contents)
+data/**
+!data/.gitkeep
+logs/**
+!logs/.gitkeep
+
+# Common outputs
+*.log
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
