@@ -1,0 +1,53 @@
+name: Daily Prices + Movers
+
+on:
+  schedule:
+    # 01:10 UTC Tue–Sat  (≈ 6:10 pm PT Mon–Fri)
+    - cron: "10 1 * * 2-6"
+  workflow_dispatch: {}
+
+concurrency:
+  group: daily-prices-and-movers
+  cancel-in-progress: false
+
+jobs:
+  run-prices-and-movers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install deps
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; else pip install pandas pyarrow yfinance supabase python-dotenv; fi
+
+      - name: Run daily prices ETL
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          python ./Scripts/daily_prices_2025.py
+
+      - name: Snapshot movers (15%) via RPC
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          curl -sS -X POST \
+            "${SUPABASE_URL}/rest/v1/rpc/snapshot_movers_daily" \
+            -H "apikey: ${SUPABASE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_KEY}" \
+            -H "Content-Type: application/json" \
+            --data '{"threshold_pct": 15}' \
+            | jq '.'
